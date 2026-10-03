@@ -86,10 +86,19 @@ for (const [li, def] of LEVELS.entries()) {
       if (e.type === 'station') points.push([e.id + ' pickup', e.pickup.x, e.pickup.y, true]);
       if (e.type === 'table') e.seats.forEach((s, i) => points.push([e.id + ' seat' + i, s.x, s.y, true]));
     }
+    const spots = new Map();
     for (const [name, x, y, mustBeFree] of points) {
       if (!mustBeFree) continue;
       const k = Math.floor(x) + ',' + Math.floor(y);
       assert.ok(!occupied.has(k), `${name} (${k}) is blocked by ${occupied.get(k)}`);
+      // seats and queue slots must not share a tile with another interaction spot
+      if (/seat|queue/.test(name)) {
+        assert.ok(!spots.has(k), `${name} shares tile ${k} with ${spots.get(k)}`);
+      }
+      if (!/ pad$/.test(name)) {
+        if (spots.has(k) && /seat|queue/.test(spots.get(k))) assert.fail(`${name} shares tile ${k} with ${spots.get(k)}`);
+        if (!spots.has(k)) spots.set(k, name);
+      }
     }
     for (const r of map.rooms) {
       if (!r.padPos) continue;
