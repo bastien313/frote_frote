@@ -408,12 +408,21 @@ function drawScrubberMachine(ctx, S, fx, fy) {
 export function drawTable(ctx, x, y, S, color, legColor) {
   // x,y = screen of tile top-left; table top at height 0.42
   const h = S * 0.42;
-  const inset = S * 0.1;
-  shadow(ctx, x + S / 2, y + S * 0.62, S * 0.42, S * 0.18, 0.2);
+  const inset = S * 0.08;
+  shadow(ctx, x + S / 2, y + S * 0.7, S * 0.44, S * 0.17, 0.22);
   ctx.fillStyle = legColor;
-  ctx.fillRect(x + S * 0.2, y + S * 0.55 - h, S * 0.07, h + S * 0.1);
-  ctx.fillRect(x + S * 0.73, y + S * 0.55 - h, S * 0.07, h + S * 0.1);
-  block(ctx, x + inset, y + inset, S - inset * 2, S * 0.75, S * 0.07, color, shade(color, 0.75), S * 0.08);
+  rrect(ctx, x + S * 0.2, y + S * 0.5 - h * 0.6, S * 0.08, h * 0.6 + S * 0.18, S * 0.03); ctx.fill();
+  rrect(ctx, x + S * 0.72, y + S * 0.5 - h * 0.6, S * 0.08, h * 0.6 + S * 0.18, S * 0.03); ctx.fill();
+  const tx = x + inset, tw = S - inset * 2, tyy = y + S * 0.06 - h * 0.5, th = S * 0.72;
+  ctx.fillStyle = shade(color, 0.72);
+  rrect(ctx, tx, tyy + S * 0.08, tw, th, S * 0.1); ctx.fill();
+  ctx.fillStyle = color;
+  rrect(ctx, tx, tyy, tw, th, S * 0.1); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  rrect(ctx, tx + S * 0.06, tyy + S * 0.05, tw - S * 0.12, S * 0.08, S * 0.04); ctx.fill();
+  ctx.strokeStyle = shade(color, 0.85);
+  ctx.lineWidth = 1;
+  rrect(ctx, tx + 0.5, tyy + 0.5, tw - 1, th - 1, S * 0.1); ctx.stroke();
 }
 
 export function drawChair(ctx, x, y, S, color, face) {
@@ -483,28 +492,100 @@ const STATION_STYLE = {
 export function drawStation(ctx, st, x, y, S, product, time) {
   const s = STATION_STYLE[st.draw] || STATION_STYLE.grill;
   const bump = st.bump > 0 ? Math.sin(st.bump * Math.PI) * S * 0.04 : 0;
+  const tall = st.draw === 'coffee' || st.draw === 'pastry' ? 0.78 : st.draw === 'sushi' ? 0.5 : 0.62;
+  const H = S * tall + bump;
   shadow(ctx, x + S / 2, y + S * 0.9, S * 0.5, S * 0.16, 0.22);
-  block(ctx, x + S * 0.05, y + S * 0.1, S * 0.9, S * 0.82, S * 0.62 + bump, s.top, s.front, S * 0.06);
-  const ty = y + S * 0.1 - S * 0.62 - bump;
-  // working surface
-  ctx.fillStyle = s.accent;
-  rrect(ctx, x + S * 0.16, ty + S * 0.1, S * 0.68, S * 0.5, S * 0.05); ctx.fill();
+  block(ctx, x + S * 0.05, y + S * 0.1, S * 0.9, S * 0.82, H, s.top, s.front, S * 0.06);
+  const ty = y + S * 0.1 - H; // top face y
+  const fy = y + S * 0.92 - H; // front face top y
   const flick = 0.6 + Math.sin(time * 12 + st.x) * 0.2;
-  ctx.fillStyle = s.glow;
-  ctx.globalAlpha = 0.45 * flick;
-  rrect(ctx, x + S * 0.2, ty + S * 0.14, S * 0.6, S * 0.42, S * 0.05); ctx.fill();
-  ctx.globalAlpha = 1;
-  if (st.draw === 'grill') {
-    ctx.strokeStyle = '#555b63'; ctx.lineWidth = 1.5;
-    for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(x + S * 0.18, ty + S * 0.1 + i * S * 0.1); ctx.lineTo(x + S * 0.82, ty + S * 0.1 + i * S * 0.1); ctx.stroke(); }
+  const cooking = st.t > 0.05;
+  switch (st.draw) {
+    case 'coffee': {
+      ctx.fillStyle = '#2a2a2e'; rrect(ctx, x + S * 0.2, fy + S * 0.08, S * 0.6, S * 0.32, S * 0.05); ctx.fill();
+      ctx.fillStyle = '#c0c4ca'; ctx.fillRect(x + S * 0.33, fy + S * 0.1, S * 0.06, S * 0.12); ctx.fillRect(x + S * 0.61, fy + S * 0.1, S * 0.06, S * 0.12);
+      ctx.fillStyle = '#7dff9a'; ctx.fillRect(x + S * 0.45, fy + S * 0.05, S * 0.1, S * 0.04);
+      ctx.fillStyle = s.accent; rrect(ctx, x + S * 0.15, ty + S * 0.12, S * 0.7, S * 0.45, S * 0.06); ctx.fill();
+      ctx.fillStyle = '#d9b48a'; ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.34, S * 0.18, S * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      if (cooking) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+        for (let k = 0; k < 2; k++) {
+          const sx = x + S * (0.4 + k * 0.2), wob = Math.sin(time * 4 + k) * S * 0.04;
+          ctx.beginPath(); ctx.moveTo(sx, ty + S * 0.2); ctx.quadraticCurveTo(sx + wob, ty - S * 0.05, sx - wob, ty - S * 0.25); ctx.stroke();
+        }
+      }
+      break;
+    }
+    case 'oven': {
+      // brick dome with fire
+      ctx.fillStyle = '#b5532f';
+      ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.45, S * 0.42, S * 0.36, 0, Math.PI, 0); ctx.lineTo(x + S * 0.92, ty + S * 0.5); ctx.lineTo(x + S * 0.08, ty + S * 0.5); ctx.fill();
+      ctx.fillStyle = '#d06a3e';
+      ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.42, S * 0.3, S * 0.24, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#2a1410';
+      ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.6, S * 0.2, S * 0.15, 0, Math.PI, 0); ctx.fill();
+      ctx.globalAlpha = 0.7 * flick; ctx.fillStyle = s.glow;
+      ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.6, S * 0.14, S * 0.09, 0, Math.PI, 0); ctx.fill();
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 'sushi': {
+      ctx.fillStyle = '#c9a06a'; rrect(ctx, x + S * 0.14, ty + S * 0.12, S * 0.72, S * 0.5, S * 0.05); ctx.fill();
+      ctx.fillStyle = '#fafafa'; ctx.beginPath(); ctx.ellipse(x + S * 0.33, ty + S * 0.36, S * 0.12, S * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff8a5c'; rrect(ctx, x + S * 0.52, ty + S * 0.24, S * 0.26, S * 0.1, S * 0.03); ctx.fill();
+      ctx.fillStyle = '#ffb08f'; rrect(ctx, x + S * 0.52, ty + S * 0.38, S * 0.26, S * 0.1, S * 0.03); ctx.fill();
+      ctx.fillStyle = '#d8dde3'; ctx.fillRect(x + S * 0.2, ty + S * 0.55, S * 0.4, S * 0.03);
+      break;
+    }
+    case 'hotdog': {
+      ctx.fillStyle = '#3a3a40'; rrect(ctx, x + S * 0.14, ty + S * 0.12, S * 0.72, S * 0.5, S * 0.05); ctx.fill();
+      for (let k = 0; k < 4; k++) {
+        const ry = ty + S * (0.17 + k * 0.11);
+        ctx.fillStyle = '#c0c4ca'; ctx.fillRect(x + S * 0.16, ry, S * 0.68, S * 0.08);
+        ctx.fillStyle = '#b5532f'; rrect(ctx, x + S * (0.22 + ((k * 0.17 + time * 0.05) % 0.3)), ry + S * 0.005, S * 0.3, S * 0.07, S * 0.035); ctx.fill();
+      }
+      break;
+    }
+    case 'crepe': {
+      ctx.fillStyle = '#1f2228'; ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.37, S * 0.36, S * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.35 * flick; ctx.fillStyle = s.glow; ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.37, S * 0.3, S * 0.21, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      if (cooking) { ctx.fillStyle = '#f2c46b'; ctx.beginPath(); ctx.ellipse(x + S * 0.5, ty + S * 0.37, S * 0.28 * Math.min(1, st.t * 2), S * 0.19 * Math.min(1, st.t * 2), 0, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    }
+    case 'taco': {
+      ctx.fillStyle = s.accent; rrect(ctx, x + S * 0.14, ty + S * 0.12, S * 0.72, S * 0.5, S * 0.05); ctx.fill();
+      ctx.fillStyle = '#2a2a2e'; ctx.beginPath(); ctx.ellipse(x + S * 0.32, ty + S * 0.37, S * 0.14, S * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + S * 0.68, ty + S * 0.37, S * 0.14, S * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7cc36a'; ctx.beginPath(); ctx.arc(x + S * 0.3, ty + S * 0.35, S * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e8463a'; ctx.beginPath(); ctx.arc(x + S * 0.7, ty + S * 0.36, S * 0.05, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 'pastry': {
+      ctx.fillStyle = '#3a2533'; rrect(ctx, x + S * 0.2, fy + S * 0.08, S * 0.6, S * 0.4, S * 0.05); ctx.fill();
+      ctx.globalAlpha = 0.5 * flick; ctx.fillStyle = s.glow; rrect(ctx, x + S * 0.24, fy + S * 0.12, S * 0.52, S * 0.32, S * 0.04); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = s.accent; rrect(ctx, x + S * 0.15, ty + S * 0.12, S * 0.7, S * 0.45, S * 0.06); ctx.fill();
+      ctx.fillStyle = '#ffd1e8'; ctx.fillRect(x + S * 0.25, ty + S * 0.3, S * 0.5, S * 0.05);
+      break;
+    }
+    default: { // grill
+      ctx.fillStyle = s.accent;
+      rrect(ctx, x + S * 0.16, ty + S * 0.1, S * 0.68, S * 0.5, S * 0.05); ctx.fill();
+      ctx.fillStyle = s.glow;
+      ctx.globalAlpha = 0.45 * flick;
+      rrect(ctx, x + S * 0.2, ty + S * 0.14, S * 0.6, S * 0.42, S * 0.05); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#555b63'; ctx.lineWidth = 1.5;
+      for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(x + S * 0.18, ty + S * 0.1 + i * S * 0.1); ctx.lineTo(x + S * 0.82, ty + S * 0.1 + i * S * 0.1); ctx.stroke(); }
+    }
   }
-  // cooking item on top while producing
-  if (st.t > 0.05) drawFood(ctx, product, x + S * 0.5, ty + S * 0.32, S * (0.18 + st.t * 0.16));
-  // front window / knobs
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(x + S * 0.12, y + S * 0.92 - S * 0.5, S * 0.76, S * 0.05);
-  ctx.fillStyle = '#ffcf3a';
-  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + S * (0.3 + i * 0.2), y + S * 0.92 - S * 0.25, S * 0.04, 0, Math.PI * 2); ctx.fill(); }
+  if (cooking && st.draw !== 'crepe' && st.draw !== 'coffee') drawFood(ctx, product, x + S * 0.5, ty + S * 0.3, S * (0.16 + st.t * 0.16));
+  // front details
+  if (st.draw !== 'coffee' && st.draw !== 'pastry') {
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x + S * 0.12, fy + S * 0.08, S * 0.76, S * 0.05);
+    ctx.fillStyle = '#ffcf3a';
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + S * (0.3 + i * 0.2), y + S * 0.92 - H * 0.4, S * 0.04, 0, Math.PI * 2); ctx.fill(); }
+  }
 }
 
 export function drawBin(ctx, b, x, y, S) {

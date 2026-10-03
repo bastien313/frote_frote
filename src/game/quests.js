@@ -84,6 +84,13 @@ export class Quests {
       if (q.kind === 'build' && g.entityById[q.id]?.built) this.complete();
       else if (q.kind === 'cleanRoom' && g.map.roomById[q.room]?.cleaned) this.complete();
       else if (q.kind === 'unlock' && g.map.roomById[q.room]?.unlocked) this.complete();
+      else {
+        this.refreshT -= dt;
+        if (this.refreshT <= 0) {
+          this.refreshT = 1;
+          if (this.impossible(q)) this.skip();
+        }
+      }
       return;
     }
     this.refreshT -= dt;
@@ -91,6 +98,26 @@ export class Quests {
       this.refreshT = 0.5;
       this.current = this.auto();
     }
+  }
+
+  /** A scripted tutorial step that can no longer happen (e.g. nothing left to pick up). */
+  impossible(q) {
+    const g = this.game;
+    const unlocked = (r) => r.unlocked;
+    const trashLeft = g.trash.some((t) => { const r = g.map.roomAtWorld(t.x, t.y); return !t.gone && (!r || r.unlocked); });
+    switch (q.kind) {
+      case 'collect': return !trashLeft && !g.junk.some((j) => { const r = g.map.roomAtWorld(j.x, j.y); return !r || r.unlocked; });
+      case 'deposit': return !trashLeft && g.player.bag.length === 0 && !g.tables.some((t) => t.dirty);
+      case 'scrub': return !g.dirt.nearestDirtyTile(g.player.x, g.player.y, (ri) => unlocked(g.map.rooms[ri]), 0.5);
+      case 'smash': return !g.junk.some((j) => { const r = g.map.roomAtWorld(j.x, j.y); return !r || r.unlocked; });
+      default: return false;
+    }
+  }
+
+  skip() {
+    this.i++;
+    this.prog = 0;
+    this.select();
   }
 
   complete() {

@@ -7,7 +7,7 @@ import { DIRT_TYPES } from '../data/catalog.js';
 import { fbm, valueNoise, hashString } from '../util/rng.js';
 import { CELL } from './level.js';
 
-export const DIRT_RES = 8;
+export const DIRT_RES = 10;
 /** Amount removed per second at the center of a power-1 tool on hardness-1 dirt. */
 export const BASE_CLEAN_RATE = 3.2;
 const EPS = 0.03;
@@ -69,7 +69,7 @@ export class DirtLayer {
         for (let k = 0; k < cells.length; k++) {
           const i = cells[k];
           const x = i % this.w, y = (i / this.w) | 0;
-          vals[k] = fbm(x / scale, y / scale, seed, 4) * 0.92 + valueNoise(x / 2.5, y / 2.5, seed + 9) * 0.08;
+          vals[k] = fbm(x / scale, y / scale, seed, 3);
         }
         const sorted = Float32Array.from(vals).sort();
         const cover = Math.min(0.98, Math.max(0.02, L.cover ?? 0.5));
@@ -77,10 +77,12 @@ export class DirtLayer {
         for (let k = 0; k < cells.length; k++) {
           const v = vals[k];
           if (v <= t) continue;
-          const a = Math.min(1, 0.35 + (v - t) / 0.1) * (L.amount ?? 1);
+          const a = Math.min(1, (v - t) / 0.07) * (L.amount ?? 1);
+          if (a < 0.05) continue;
           const i = cells[k];
-          if (a > this.amount[i]) {
-            this.amount[i] = a;
+          // later layers are painted on top of earlier ones (base dirt first, then stains)
+          if (a > 0.3 || a > this.amount[i]) {
+            this.amount[i] = Math.max(a, this.amount[i] * 0.6);
             this.type[i] = typeIndex;
           }
         }
@@ -146,7 +148,6 @@ export class DirtLayer {
         removed += rem;
         if (ri >= 0) perRoom.set(ri, (perRoom.get(ri) || 0) + rem);
         this.tileSum[((y / res) | 0) * this.map.w + ((x / res) | 0)] -= rem;
-        this.writePixel(i);
       }
     }
     if (removed > 0) {
@@ -183,7 +184,6 @@ export class DirtLayer {
         added += delta;
         this.roomNow[ri] += delta;
         this.tileSum[ty * this.map.w + tx] += delta;
-        this.writePixel(i);
       }
     }
     this.markDirty(x0, y0, x1, y1);
@@ -208,7 +208,6 @@ export class DirtLayer {
           }
           this.amount[i] = 0;
           this.type[i] = 0;
-          this.writePixel(i);
         }
       }
       this.tileSum[ty * this.map.w + tx] = 0;
@@ -224,7 +223,6 @@ export class DirtLayer {
       if (pts.length < 60 && Math.random() < 0.05) pts.push({ x: (i % this.w + 0.5) / this.res, y: (((i / this.w) | 0) + 0.5) / this.res });
       this.amount[i] = 0;
       this.type[i] = 0;
-      this.writePixel(i);
     }
     this.roomNow[ri] = 0;
     this.recomputeTotals(false);
@@ -278,27 +276,61 @@ export class DirtLayer {
 
   // ---------------------------------------------------------------- rendering
 
-  writePixel(i) {
-    const a = this.amount[i];
-    const p = i * 4;
-    if (a <= 0) { this.pixels[p + 3] = 0; return; }
-    const t = DIRT_TYPES[this.type[i]];
-    const s = 0.72 + (this.shade[i] / 255) * 0.5 - a * 0.1;
-    this.pixels[p] = t.color[0] * s;
-    this.pixels[p + 1] = t.color[1] * s;
-    this.pixels[p + 2] = t.color[2] * s;
-    this.pixels[p + 3] = Math.min(1, 0.3 + a * 1.15) * t.alpha * 255;
+  /**
+   * Recompute display pixels of a cell rectangle. Alpha is a 3x3 blur of the
+   * amounts so that, once upscaled with bilinear filtering, stains get soft
+   * organic edges instead of a staircase.
+   */
+  refreshPixels(x0, y0, x1, y1) {
+    const W = this.w, H = this.h, A = this.amount, T = this.type, P = this.pixels, SH = this.shade;
+    x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(W - 1, x1); y1 = Math.min(H - 1, y1);
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const i = y * W + x;
+        // amount-weighted blend of the 3x3 neighbourhood (colour and opacity)
+        let wsum = 0, asum = 0, r = 0, g = 0, b = 0, al = 0;
+        for (let oy = -1; oy <= 1; oy++) {
+          const yy = y + oy;
+          if (yy < 0 || yy >= H) continue;
+          for (let ox = -1; ox <= 1; ox++) {
+            const xx = x + ox;
+            if (xx < 0 || xx >= W) continue;
+            const w = (ox === 0 ? 2 : 1) * (oy === 0 ? 2 : 1);
+            wsum += w;
+            const j = yy * W + xx;
+            const a = A[j];
+            if (a <= 0) continue;
+            const t = DIRT_TYPES[T[j]];
+            if (!t) continue;
+            const wa = w * a;
+            const sh = 0.72 + (SH[j] / 255) * 0.5 - a * 0.1;
+            asum += wa;
+            r += wa * t.color[0] * sh; g += wa * t.color[1] * sh; b += wa * t.color[2] * sh;
+            al += wa * t.alpha;
+          }
+        }
+        const p = i * 4;
+        const a = asum / wsum;
+        if (a < 0.02) { P[p + 3] = 0; continue; }
+        P[p] = r / asum;
+        P[p + 1] = g / asum;
+        P[p + 2] = b / asum;
+        P[p + 3] = Math.min(1, a * 1.6) * (al / asum) * 255;
+      }
+    }
   }
 
   markDirty(x0, y0, x1, y1) {
+    this.refreshPixels(x0 - 1, y0 - 1, x1 + 1, y1 + 1);
     const d = this.dirty;
+    x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(this.w - 1, x1 + 1); y1 = Math.min(this.h - 1, y1 + 1);
     if (!d.any) { d.x0 = x0; d.y0 = y0; d.x1 = x1; d.y1 = y1; d.any = true; return; }
     d.x0 = Math.min(d.x0, x0); d.y0 = Math.min(d.y0, y0);
     d.x1 = Math.max(d.x1, x1); d.y1 = Math.max(d.y1, y1);
   }
 
   markAllDirty() {
-    for (let i = 0; i < this.amount.length; i++) this.writePixel(i);
+    this.refreshPixels(0, 0, this.w - 1, this.h - 1);
     this.dirty = { x0: 0, y0: 0, x1: this.w - 1, y1: this.h - 1, any: true };
   }
 
@@ -308,10 +340,12 @@ export class DirtLayer {
     const n = this.amount.length;
     const q = new Uint8Array(n);
     for (let i = 0; i < n; i++) q[i] = Math.round(Math.min(1, this.amount[i]) * 255);
-    return { a: rleEncode(q), t: rleEncode(this.type), i: Array.from(this.roomInitial, (v) => Math.round(v)) };
+    return { r: this.res, w: this.w, h: this.h, a: rleEncode(q), t: rleEncode(this.type), i: Array.from(this.roomInitial, (v) => Math.round(v)) };
   }
 
+  /** Restore saved dirt. Returns false if the save does not match this grid (then caller regenerates). */
   deserialize(data) {
+    if (!data || data.r !== this.res || data.w !== this.w || data.h !== this.h) return false;
     const q = rleDecode(data.a, this.amount.length);
     const t = rleDecode(data.t, this.type.length);
     const minQ = Math.ceil(EPS * 255);
@@ -325,6 +359,7 @@ export class DirtLayer {
       this.roomInitial.set(data.i);
     }
     this.markAllDirty();
+    return true;
   }
 }
 

@@ -21,7 +21,7 @@ const maxMin = parseFloat((args.find((a) => a.startsWith('--minutes=')) || '--mi
 const verbose = args.includes('--verbose');
 const talentsArg = (args.find((a) => a.startsWith('--talents=')) || '').split('=')[1];
 
-class Bot {
+export class Bot {
   constructor(game) {
     this.g = game;
     this.path = null;
@@ -192,7 +192,10 @@ export function run(index) {
   return completeAt;
 }
 
-const which = levelArg === 'all' ? LEVELS.map((_, i) => i) : [parseInt(levelArg, 10)];
-let total = 0;
-for (const i of which) total += run(i) || 0;
-if (which.length > 1) console.log(`\nTOTAL (bot) : ${fmtDuration(total)}`);
+const isMain = process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href;
+if (isMain) {
+  const which = levelArg === 'all' ? LEVELS.map((_, i) => i) : [parseInt(levelArg, 10)];
+  let total = 0;
+  for (const i of which) total += run(i) || 0;
+  if (which.length > 1) console.log(`\nTOTAL (bot) : ${fmtDuration(total)}`);
+}

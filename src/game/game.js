@@ -156,7 +156,11 @@ export class Game {
       r.reveal = 0;
       r.trashInit = rs?.ti;
     }
-    if (s.dirt) this.dirt.deserialize(s.dirt); else this.dirt.generate(this.def);
+    if (!s.dirt || !this.dirt.deserialize(s.dirt)) {
+      this.dirt.generate(this.def);
+      // rooms already cleaned stay clean if the dirt grid format changed
+      for (const r of this.map.rooms) if (r.cleaned) this.dirt.wipeRoom(r.index);
+    }
     for (const e of this.entities) {
       const es = s.ents?.[e.id];
       if (es) {

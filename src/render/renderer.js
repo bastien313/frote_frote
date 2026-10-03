@@ -271,11 +271,13 @@ export class Renderer {
       p.look.hair = '#5a3a22';
       p.look.pants = '#2c3e66';
       const tool = game.stats.tool.id;
+      const behind = p.face.y < -0.2;
+      if (behind) this.drawCarryStack(p, game);
       drawCharacter(ctx, p, this.sx(p.x), this.sy(p.y), S, {
         hat, hatColor: '#ffcc33', bag: Math.min(1, p.bag.length / game.stats.bagCap), bagFull: p.bag.length >= game.stats.bagCap,
         tool: tool === 'scrubber' ? null : tool, ride: tool === 'scrubber',
       });
-      this.drawCarryStack(p, game);
+      if (!behind) this.drawCarryStack(p, game);
     });
     for (const c of game.customers) {
       if (!inView(c.x, c.y)) continue;
@@ -289,9 +291,11 @@ export class Renderer {
       add(s.y, () => {
         const o = { hat: 'hat_cap', hatColor: shade(s.look.shirt, 0.7), apron: s.role === 'server' ? '#ffffff' : null };
         if (s.role === 'cleaner') { o.bag = Math.min(1, s.bag.length / (game.stats.staffCap * 3)); o.tool = 'mop'; }
-        if (s.role === 'cashier') o.hat = 'hat_headphones';
+        if (s.role === 'cashier') { o.apron = '#e9f7ee'; o.hatColor = '#1f7a45'; }
+        const behind = s.face.y < -0.2;
+        if (s.food > 0 && behind) this.drawCarryStack(s, game);
         drawCharacter(ctx, s, this.sx(s.x), this.sy(s.y), S, o);
-        if (s.food > 0) this.drawCarryStack(s, game);
+        if (s.food > 0 && !behind) this.drawCarryStack(s, game);
       });
     }
     list.sort((a, b) => a.y - b.y);
@@ -313,12 +317,10 @@ export class Renderer {
   drawCarryStack(a, game, n = a.food) {
     const ctx = this.ctx, S = this.S;
     if (!n) return;
-    const x = this.sx(a.x + a.face.x * 0.18), y = this.sy(a.y + Math.max(0, a.face.y) * 0.12, 0.62);
+    const x = this.sx(a.x + a.face.x * 0.3), y = this.sy(a.y + a.face.y * 0.22, 0.42);
     const vis = Math.min(n, 10);
-    if (a.face.y > -0.3) {
-      ctx.fillStyle = '#c9ced6';
-      rrect(ctx, x - S * 0.2, y - S * 0.02, S * 0.4, S * 0.07, S * 0.03); ctx.fill();
-    }
+    ctx.fillStyle = '#c9ced6';
+    rrect(ctx, x - S * 0.2, y - S * 0.02, S * 0.4, S * 0.07, S * 0.03); ctx.fill();
     for (let i = 0; i < vis; i++) drawFood(ctx, game.def.product.id, x, y - S * 0.06 - i * S * 0.1, S * 0.26);
   }
 
@@ -400,7 +402,7 @@ export class Renderer {
     const ctx = this.ctx, S = this.S;
     const x = this.sx(e.x), y = this.sy(e.y);
     drawTable(ctx, x, y, S, this.theme.table || '#e9d8b8', this.theme.tableLeg || '#6b4a2d');
-    const topY = y + S * 0.1 - S * 0.07;
+    const topY = y + S * 0.06 - S * 0.21 - S * 0.06;
     for (const s of e.seats) {
       const ox = (s.x - e.cx) * S * 0.24, oy = (s.y - e.cy) * S * 0.18;
       if (s.mess) {

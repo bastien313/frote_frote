@@ -43,14 +43,32 @@ export function valueNoise(x, y, seed = 0) {
   return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
 }
 
-/** Fractal brownian motion built on valueNoise, roughly in [0,1). */
+/** 2D gradient (Perlin-style) noise in [0,1). Fewer axis-aligned artifacts than value noise. */
+export function gradNoise(x, y, seed = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const g = (cx, cy, dx, dy) => {
+    const a = lattice(cx, cy, seed) * Math.PI * 2;
+    return Math.cos(a) * dx + Math.sin(a) * dy;
+  };
+  const q = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  const u = q(fx), v = q(fy);
+  const n00 = g(ix, iy, fx, fy), n10 = g(ix + 1, iy, fx - 1, fy);
+  const n01 = g(ix, iy + 1, fx, fy - 1), n11 = g(ix + 1, iy + 1, fx - 1, fy - 1);
+  const nx0 = n00 + (n10 - n00) * u, nx1 = n01 + (n11 - n01) * u;
+  return Math.min(0.9999, Math.max(0, 0.5 + (nx0 + (nx1 - nx0) * v) * 0.75));
+}
+
+/** Fractal brownian motion of gradient noise (octaves rotated to hide the lattice), roughly in [0,1). */
 export function fbm(x, y, seed = 0, octaves = 4) {
-  let amp = 0.5, freq = 1, sum = 0, norm = 0;
+  let amp = 0.5, sum = 0, norm = 0;
+  const c = Math.cos(0.65), s = Math.sin(0.65);
   for (let o = 0; o < octaves; o++) {
-    sum += amp * valueNoise(x * freq, y * freq, seed + o * 1013);
+    sum += amp * gradNoise(x + o * 17.3, y - o * 9.1, seed + o * 1013);
     norm += amp;
     amp *= 0.5;
-    freq *= 2.03;
+    const nx = (x * c - y * s) * 2.03, ny = (x * s + y * c) * 2.03;
+    x = nx; y = ny;
   }
   return sum / norm;
 }
