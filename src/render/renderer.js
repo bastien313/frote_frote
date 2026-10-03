@@ -36,8 +36,9 @@ export class Renderer {
     this.canvas.style.height = h + 'px';
     this.dpr = dpr;
     this.W = w; this.H = h;
-    // ~7.5 tiles across the smallest screen dimension
-    this.S = clamp(Math.min(w, h) / 7.2, 38, 96) * this.zoomPref;
+    // portrait phones: ~7.2 tiles across; landscape screens show a bit more of the level
+    const base = w <= h ? w / 7.2 : h / 8.6;
+    this.S = clamp(base, 38, 84) * this.zoomPref;
     this.tileCache.clear();
   }
 

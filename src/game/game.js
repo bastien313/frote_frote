@@ -2,7 +2,7 @@
 // It never touches the DOM: it emits events (sfx, toasts, stars...) that the
 // app/UI/audio layers listen to, so it can also run headless (tests, sim).
 
-import { LevelMap } from './level.js';
+import { LevelMap, CELL } from './level.js';
 import { DirtLayer } from './dirt.js';
 import { createEntity } from './entities.js';
 import { Player, Customer, Staff, updateCustomer, updateStaff } from './agents.js';
@@ -401,6 +401,7 @@ export class Game {
     this.updateStations(dt);
     this.updateCounters(dt);
     this.updateSpawning(dt);
+    this.updateStreetLitter(dt);
     this.updateFlyers(dt);
     this.updatePads(dt);
     for (const e of this.entities) if (e.pop > 0) e.pop = Math.max(0, e.pop - dt * 1.8);
@@ -933,6 +934,32 @@ export class Game {
     const cu = new Customer(sp[0], sp[1], best, order, { x: exit[0], y: exit[1] });
     best.queue.push(cu);
     this.customers.push(cu);
+  }
+
+  /**
+   * Passers-by drop litter on the street from time to time. It is a small extra
+   * income and a safety net: if the player spent everything and has no way to
+   * earn money (no restaurant running, nothing left to clean), litter comes faster.
+   */
+  updateStreetLitter(dt) {
+    this.litterT = (this.litterT ?? 20) - dt;
+    if (this.litterT > 0) return;
+    if (!this.streetCells) {
+      this.streetCells = [];
+      for (let i = 0; i < this.map.cell.length; i++) if (this.map.cell[i] === CELL.PAVEMENT) this.streetCells.push(i);
+    }
+    if (!this.streetCells.length) { this.litterT = 1e9; return; }
+    const running = this.counters.some((c) => c.built) && this.stations.some((s) => s.built) && this.tables.some((t) => t.built);
+    const dirty = this.map.rooms.some((r) => r.unlocked && !r.cleaned);
+    const cheapest = this.pads.reduce((m, p) => Math.min(m, p.cost - this.padPaid(p)), Infinity);
+    const stuck = !running && !dirty && this.state.money < cheapest;
+    this.litterT = stuck ? 3 : 25 + Math.random() * 20;
+    const onStreet = this.trash.filter((t) => !this.map.roomAtWorld(t.x, t.y)).length;
+    if (onStreet >= (stuck ? 16 : 6)) return;
+    const ci = this.streetCells[Math.floor(Math.random() * this.streetCells.length)];
+    const x = (ci % this.map.w) + 0.2 + Math.random() * 0.6, y = Math.floor(ci / this.map.w) + 0.2 + Math.random() * 0.6;
+    const it = this.addTrash(x, y, pick(['can', 'paper', 'cup', 'bottle', 'bag', 'box']));
+    it.pop = 1; it.popFrom = { x, y: y - 0.01 };
   }
 
   // ---------------------------------------------------------------- rooms, rating, stars

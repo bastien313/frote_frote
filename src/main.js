@@ -42,7 +42,14 @@ class App {
     window.addEventListener('resize', () => this.renderer.resize());
     document.addEventListener('visibilitychange', () => this.onVisibility());
     window.addEventListener('pagehide', () => this.persist());
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installPrompt = e; });
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.installPrompt = e;
+      if (!this.save.meta.installHint) {
+        this.save.meta.installHint = 1;
+        setTimeout(() => this.ui.toast('📲 Astuce : installe le jeu depuis ⚙️ Options pour jouer hors-ligne en plein écran.'), 60000);
+      }
+    });
     this.input.onFirstGesture = () => this.onGesture();
     this.registerSW();
     if (this.debug) this.installDebug();
