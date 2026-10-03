@@ -3,6 +3,7 @@
 //   node tools/make-icons.mjs
 // Requires Playwright (preinstalled in the dev container, otherwise `npm i -D playwright`).
 
+/* global draw */
 import { chromium } from 'playwright';
 import { writeFileSync, mkdirSync } from 'node:fs';
 

@@ -11,7 +11,7 @@
     "sim:all": "node tools/sim.mjs all",
     "map": "node tools/print-map.mjs",
     "icons": "node tools/make-icons.mjs",
-    "lint": "npx --yes eslint@9 src tools tests"
+    "lint": "npx --yes eslint@9 src tools tests sw.js"
   },
   "engines": {
     "node": ">=18"

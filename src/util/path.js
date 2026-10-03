@@ -64,7 +64,6 @@ export function findPath(w, h, isFree, sx, sy, gx, gy, maxNodes = 6000) {
   g[s] = 0;
   heap.push(s, hfn(sx, sy));
   let expanded = 0;
-  let bestNode = s, bestH = hfn(sx, sy);
   while (heap.size > 0) {
     const cur = heap.pop();
     if (closed[cur]) continue;
@@ -73,8 +72,6 @@ export function findPath(w, h, isFree, sx, sy, gx, gy, maxNodes = 6000) {
     if (cx === gx && cy === gy) return rebuild(came, cur, w, s);
     // goal blocked: stop when adjacent to it
     if (!goalFree && Math.abs(cx - gx) <= 1 && Math.abs(cy - gy) <= 1) return rebuild(came, cur, w, s);
-    const hh = hfn(cx, cy);
-    if (hh < bestH) { bestH = hh; bestNode = cur; }
     if (++expanded > maxNodes) break;
     for (const [dx, dy, cost] of DIRS) {
       const nx = cx + dx, ny = cy + dy;

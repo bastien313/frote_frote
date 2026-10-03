@@ -69,6 +69,11 @@ export class UI {
     this.hud = h('div', { class: 'hud' }, this.top, this.quest, this.roomProg, this.side);
     this.modalWrap = h('div', { class: 'modal-wrap hidden', onclick: (e) => { if (e.target === this.modalWrap && !this.modalLocked) this.closeModal(); } });
     this.root.append(this.hud, this.toasts, this.modalWrap);
+    window.addEventListener('popstate', () => {
+      if (this.ignorePop) { this.ignorePop = false; return; }
+      if (this.modalOpen && !this.modalLocked) this.closeModal(true);
+      else this.historyPushed = false;
+    });
   }
 
   setText(el, key, v) { if (this.cache[key] !== v) { this.cache[key] = v; el.textContent = v; } }
@@ -148,13 +153,23 @@ export class UI {
       h('div', { class: 'sheet-body' }, content));
     this.modalWrap.append(sheet);
     this.modalWrap.classList.remove('hidden');
+    // Android back button closes the modal instead of leaving the game
+    if (!this.historyPushed) {
+      try { history.pushState({ ff: 'modal' }, ''); this.historyPushed = true; } catch { /* ignore */ }
+    }
     this.modalRefresh = refresh;
     this.modalT = 0;
     this.app.input.enabled = false;
     this.app.input.release();
   }
 
-  closeModal() {
+  closeModal(fromHistory = false) {
+    if (this.historyPushed && !fromHistory) {
+      this.historyPushed = false;
+      this.ignorePop = true; // the popstate caused by our own back() must not close the next modal
+      try { history.back(); } catch { this.ignorePop = false; }
+    }
+    if (fromHistory) this.historyPushed = false;
     this.modalWrap.classList.add('hidden');
     this.modalWrap.innerHTML = '';
     this.modalRefresh = null;

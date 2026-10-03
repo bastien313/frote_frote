@@ -77,3 +77,14 @@ test('bot cleans the first room and buys the counter quickly (level 1)', () => {
   assert.ok(g.map.roomById.A.cleaned, 'room A should be cleaned within 6 minutes');
   assert.ok(g.entityById.counter1.built, 'counter should be bought');
 });
+
+test('save export code roundtrip (with accents and emoji)', async () => {
+  const { exportCode, importCode } = await import('../src/engine/storage.js');
+  const s = newSave();
+  s.meta.cosmetics.hat = 'hat_crown';
+  s.levels.snack = { money: 42, note: 'Crêperie ☕' };
+  const code = exportCode(s);
+  assert.ok(code.startsWith('FF1:'));
+  assert.deepEqual(importCode(code), JSON.parse(JSON.stringify(s)));
+  assert.throws(() => importCode('nope'));
+});

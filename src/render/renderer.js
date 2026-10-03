@@ -5,7 +5,7 @@ import { CELL, WALL_LIKE } from '../game/level.js';
 import { FLOORS, JUNK_KINDS } from '../data/catalog.js';
 import {
   rrect, shadow, shade, block, drawEmoji, outlinedText, drawFood, drawTrash, drawJunk, drawCharacter,
-  drawTable, drawChair, drawCounter, drawRegister, drawBills, drawBill, drawCoin, drawStation, drawBin, drawDecor, FONT,
+  drawTable, drawChair, drawCounter, drawRegister, drawBills, drawBill, drawCoin, drawStation, drawBin, drawDecor,
 } from './draw.js';
 import { clamp, fmtMoney } from '../util/math.js';
 import { mulberry32 } from '../util/rng.js';

@@ -12,12 +12,12 @@ import { Particles } from '../engine/particles.js';
 import { TRASH_KINDS, JUNK_KINDS, DIRT_TYPES, ROLES } from '../data/catalog.js';
 import { UPGRADES, upgradeCost } from '../data/upgrades.js';
 import { mulberry32, hashString } from '../util/rng.js';
-import { dist, dist2, clamp, fmtMoney, weightedPick, pick } from '../util/math.js';
+import { dist2, clamp, fmtMoney, weightedPick, pick } from '../util/math.js';
 import { talentEffects } from '../data/meta.js';
 
 const TRASH_KEYS = Object.keys(TRASH_KINDS);
 const JUNK_KEYS = Object.keys(JUNK_KINDS);
-export const ROOM_CLEAN_THRESHOLD = 0.035;
+export const ROOM_CLEAN_THRESHOLD = 0.06;
 
 export class Game {
   /**
