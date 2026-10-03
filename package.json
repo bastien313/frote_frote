@@ -1,0 +1,20 @@
+{
+  "name": "frote-frote",
+  "version": "1.0.0",
+  "description": "Frote Frote — jeu de nettoyage satisfaisant et de gestion (arcade idle) en HTML5, installable en PWA, sans pub.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test",
+    "sim": "node tools/sim.mjs",
+    "sim:all": "node tools/sim.mjs all",
+    "map": "node tools/print-map.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "lint": "npx --yes eslint@9 src tools tests"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
