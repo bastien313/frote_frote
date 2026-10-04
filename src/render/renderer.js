@@ -579,7 +579,7 @@ export class Renderer {
       if (!a.emote || a.emoteT <= 0) continue;
       const x = this.sx(a.x), y = this.sy(a.y, 1.45);
       if (x < -S || x > this.W + S || y < -S || y > this.H + S) continue;
-      const pop = Math.min(1, (1.6 - a.emoteT) * 6 + 0.3);
+      const pop = a.emoteScale();
       ctx.globalAlpha = Math.min(1, a.emoteT * 3);
       ctx.fillStyle = 'rgba(255,255,255,0.92)';
       ctx.beginPath(); ctx.arc(x, y, S * 0.22 * pop, 0, Math.PI * 2); ctx.fill();

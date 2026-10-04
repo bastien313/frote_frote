@@ -1,6 +1,6 @@
 {
   "name": "frote-frote",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Frote Frote — jeu de nettoyage satisfaisant et de gestion (arcade idle) en HTML5, installable en PWA, sans pub.",
   "private": true,
   "type": "module",
