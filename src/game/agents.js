@@ -27,11 +27,14 @@ export class Agent {
     this.food = 0; // products carried
     this.squash = 0;
     this.look = randomLook();
-    this.emote = null; this.emoteT = 0;
+    this.emote = null; this.emoteT = 0; this.emoteMax = 0;
     this.cool = {}; // interaction cooldowns
   }
 
-  setEmote(e, t = 1.6) { this.emote = e; this.emoteT = t; }
+  setEmote(e, t = 1.6) { this.emote = e; this.emoteT = t; this.emoteMax = t; }
+
+  /** Pop-in scale of the emote bubble: grows from 0.3 to 1 right after it appears, never negative. */
+  emoteScale() { return Math.min(1, Math.max(0, this.emoteMax - this.emoteT) * 6 + 0.3); }
 
   repath(game, gx, gy) {
     const map = game.map;

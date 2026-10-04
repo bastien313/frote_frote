@@ -2,7 +2,7 @@
 // IMPORTANT: bump VERSION (same as VERSION in src/main.js) at every release, and
 // list every new file in ASSETS. tests/pwa.test.mjs checks both.
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const CACHE = 'frotefrote-' + VERSION;
 
 const ASSETS = [

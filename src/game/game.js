@@ -444,6 +444,7 @@ export class Game {
       p.x = np.x; p.y = np.y;
     }
     if (p.squash > 0) p.squash = Math.max(0, p.squash - dt * 5);
+    if (p.emoteT > 0) p.emoteT -= dt;
     this.playerScrub(dt);
     this.agentInteract(p, dt);
     this.junkSmash(dt);

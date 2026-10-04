@@ -9,6 +9,7 @@ import { Game } from '../src/game/game.js';
 import { LEVELS } from '../src/data/levels/index.js';
 import { findPath } from '../src/util/path.js';
 import { Bot } from '../tools/sim.mjs';
+import { Customer } from '../src/game/agents.js';
 
 test('fmtMoney', () => {
   assert.equal(fmtMoney(0), '0');
@@ -87,4 +88,22 @@ test('save export code roundtrip (with accents and emoji)', async () => {
   assert.ok(code.startsWith('FF1:'));
   assert.deepEqual(importCode(code), JSON.parse(JSON.stringify(s)));
   assert.throws(() => importCode('nope'));
+});
+
+test('emote bubble scale stays in range and the player emote expires', () => {
+  // regression: an angry customer leaving the queue (2.5 s emote) gave a negative
+  // bubble radius, the canvas threw and the main loop stopped (game frozen)
+  const g = new Game(LEVELS[0], 0, newSave().meta, null);
+  const counter = g.counters[0];
+  const cu = new Customer(8, 12, counter, 2, { x: 0.5, y: 16.5 });
+  counter.queue.push(cu);
+  g.customers.push(cu);
+  g.customerGivesUp(cu);
+  g.player.setEmote('🎒', 1.2);
+  for (const a of [cu, g.player]) {
+    const s = a.emoteScale();
+    assert.ok(s >= 0.3 && s <= 1, `scale ${s}`);
+  }
+  for (let i = 0; i < 40; i++) g.update(0.1);
+  assert.ok(g.player.emoteT <= 0, 'player emote should disappear');
 });

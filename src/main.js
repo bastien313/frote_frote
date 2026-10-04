@@ -11,7 +11,7 @@ import { LEVELS } from './data/levels/index.js';
 import { UI } from './ui/ui.js';
 import { fmtMoney } from './util/math.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.1';
 const AUTOSAVE_EVERY = 10; // seconds
 const OFFLINE_MIN = 60; // seconds away before offline earnings kick in
 
@@ -27,6 +27,7 @@ class App {
     this.lastHaptic = 0;
     this.last = performance.now();
     this.running = false;
+    this.frameErrors = new Set();
     this.debug = new URLSearchParams(location.search).has('debug');
   }
 
@@ -161,6 +162,28 @@ class App {
   // ---------------------------------------------------------------- loop
 
   frame(t) {
+    // Schedule the next frame first: an exception must never stop the loop for good
+    // (the menus would keep working but the game would stay frozen).
+    if (this.running) requestAnimationFrame((tt) => this.frame(tt));
+    try {
+      this.step(t);
+    } catch (e) {
+      this.onFrameError(e);
+    }
+  }
+
+  onFrameError(e) {
+    // a throw in the middle of drawing can leave save()/clip() pending on the canvas
+    const ctx = this.renderer.ctx;
+    if (ctx.reset) ctx.reset(); else this.renderer.resize();
+    const msg = e?.message || String(e);
+    if (this.frameErrors.has(msg)) return;
+    this.frameErrors.add(msg);
+    console.error(e);
+    this.ui.toast(`⚠️ Bug rattrapé : ${msg}`);
+  }
+
+  step(t) {
     const dt = Math.min(0.1, (t - this.last) / 1000);
     this.last = t;
     const g = this.game;
@@ -181,7 +204,6 @@ class App {
         this.saveSoon();
       }
     }
-    if (this.running) requestAnimationFrame((tt) => this.frame(tt));
   }
 
   onVisibility() {
